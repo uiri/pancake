@@ -1,0 +1,14 @@
+_MAIN():
+	Pop(stdin)
+	Pop(x, [[]])
+	Push(1, x)
+	Push(2, x)
+	Push(3, x)
+	Push(x, stdout)
+	Pop(x)
+	Pop(x)
+	Pop(z, x)
+	Push(z, stdout)
+	Pop(y, stdin)
+	Push(y, stdout)
+END
