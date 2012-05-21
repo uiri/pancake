@@ -1,0 +1,4 @@
+_Echo():
+	Pop(x, stdin)
+	Push(x, stdout)
+;

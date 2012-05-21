@@ -1,0 +1,21 @@
+_MAIN():
+	Pop(x, stdin)
+	Pop(y, stdin)
+	Pop(z, stdin)
+	If (
+		(x>y),
+		If (
+			(z>x),
+			Print(z),
+			Print(x)
+		),
+		Print(y)
+	)
+;
+
+_Print(x):
+	Push(x, stdout)
+;
+
+##Div(h, i, j):
+##

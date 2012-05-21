@@ -1,0 +1,27 @@
+_MAIN():
+	Pop(x, stdin)
+	Push(Fac(x), z)
+	Push(z, stdout)
+;
+
+_Fac(n):
+	Push(n, m)
+	Pop(1, m)
+	IF(
+		(m>1),
+		Push(Multiply(n,Fac(m)), o),
+		Push(m, o)
+	)
+	Push(0,o)
+;
+
+_Multiply(a,b,c):
+	Push(a, c)
+	Pop(1, b)
+	Push(b, stdout)
+	IF(
+		(b>0),
+		Multiply(a,b,c),
+		Push(0,c)
+	)
+;

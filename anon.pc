@@ -1,0 +1,15 @@
+_MAIN():
+	IF(
+		(4<5),
+		_*():
+			Push("Truth", stdout)
+		;,
+		_*():
+			Push("Falsehood", stdout)
+		;
+	)
+	_*():
+		Push("Hrm", stdout)
+		Push("Hmrmrmrmrrrm", stdout)
+	;
+;

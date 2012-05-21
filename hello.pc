@@ -1,14 +1,22 @@
+@stuff
+
+# commented
+## also commented
+## # thing
+##### as is this
+##you
+#suck
+#ha!
+##
+
 _MAIN():
-	Pop(stdin)
-	Pop(x, [[]])
-	Push(1, x)
-	Push(2, x)
-	Push(3, x)
-	Push(x, stdout)
-	Pop(x)
-	Pop(x)
-	Pop(z, x)
-	Push(z, stdout)
-	Pop(y, stdin)
-	Push(y, stdout)
-END
+	_PrintAndEcho(x):
+		Push(x, stdout)
+		Pop(x, stdin)
+		Push(x, stdout)
+	;
+	Main.PrintAndEcho("Enter your name")
+	Push("Hello ", y)
+	Push(x, y)
+	Main.PrintAndEcho(y)
+;
