@@ -14,7 +14,7 @@ tokens = ('INT', 'STR', 'FUNC', 'VAR', 'IMPORT')
 t_STR = '("([^"]+)?"|\'([^\']+)?\')'
 t_IMPORT = '@[-A-Za-z0-9]+'
 
-literals = ".,_()[]:;<>=&|!*~"
+literals = ".,_()[]:;<>=&|!"
 
 def t_INT(t):
     '\d+'
@@ -96,13 +96,13 @@ def p_functiondef(p):
     p[0] = (p[2], func)
     print "FUNCTIONDEF: ", p[0]
 
-def p_anonfunctiondef(p):
+"""def p_anonfunctiondef(p):
     'anonfunctiondef : "_" "*" arguments ":" statementlist ";"'
     func = p[5]
     func['__args'] = {}
     for s in xrange(len(p[3])):
         func['__args'][p[3][s]] = s
-    p[0] = (func, p[3], True)
+    p[0] = (func, p[3], True)"""
 
 def p_functioncall(p):
     'functioncall : functionname arguments'
@@ -111,8 +111,7 @@ def p_functioncall(p):
 
 def p_functionname(p):
     '''functionname : FUNC
-                    | FUNC "." functionname
-                    | "~" VAR'''
+                    | FUNC "." functionname'''
     p[0] = ''
     for name in p[1:]:
         p[0] += name
@@ -190,12 +189,12 @@ def p_argument_bool(p):
         p[0]['bool'] = p[3]
         p[0]['not'] = True
 
-def p_argument_anon(p):
+"""def p_argument_anon(p):
     'argument : anonfunctiondef'
-    p[0] = p[1]
+    p[0] = p[1]"""
 
 parser = yacc.yacc()
-definedfunctions = ['PUSH', 'POP', 'IF', 'FILE']
+definedfunctions = ['PUSH', 'POP', 'IF', 'FILE', 'WHILE']
 
 def evalcomp(comp):
     comp.reverse()
@@ -231,7 +230,15 @@ def evalcomp(comp):
     return res
         
 
-def evalbool(boolean):
+def evalbool(boolexpr):
+    try:
+        boolean = boolexpr['bool']
+        notbool = boolexpr['not']
+    except TypeError:
+        if boolexpr == "False":
+            return False
+        else:
+            return bool(boolexpr)
     boollist = []
     boolops = ['|', '&']
     for comp in boolean:
@@ -256,79 +263,98 @@ def evalbool(boolean):
             stack.append(oper)
             stack.append(next)
     if len(stack) == 2:
-        return stack[1]
-    else:
-        print "Uh oh"
-        return True
+        retval = stack[1]
+        if notbool:
+            retval = not retval
+        return retval
 
 def exec_func(funstr, origargs, anon=False):
     retval = 0
     args = copy.deepcopy(origargs)
     varname = {}
-    for arg in xrange(len(args)):
-        if type(args[arg]) == type(tuple()) and (funstr.upper() == 'PUSH' or funstr.upper() == 'POP'):
-            print "Evaluating..."
-            args[arg] = exec_func(*args[arg])
-        if type(args[arg]) == type(str()):
-            if args[arg] in varlist:
-                varname[arg] = args[arg]
-                args[arg] = varlist[args[arg]]
-        if type(args[arg]) == type(str()) and args[arg] != '':
-            if args[arg][0] == '"' or args[arg][0] == "'":
-                args[arg] = args[arg][1:-1]
-        if type(args[arg]) == type(dict()):
-            if len(args[arg]) == 2:
-                try:
-                    args[arg]['bool']
-                    args[arg]['not']
-                except KeyError:
-                    continue
-                notargs = args[arg]['not']
-                args[arg] = evalbool(args[arg]['bool'])
-                if notargs:
-                    args[arg] = not args[arg]
     if anon:
         grabbed = funstr
     elif funstr.upper() in definedfunctions:
         grabbed = False
-        if args[1] == "False" or args[1] == "True":
-            args[1] = bool(args[1])
-        testtype = type(args[1])
-        if funstr.upper() == 'IF':
-            if type(args[0]) != type(bool()):
-                if type(args[0]) == type(tuple()):
-                    args[0] = exec_func(*args[0])
-                if type(args[0]) == type(str()) or type(args[0]) == type(int()):
-                    args[0] = bool(eval(str(args[0])))
-                if type(args[0]) != type(bool()):
-                    raise Exception("First argument for IF must be boolean, instead it is " + str(args[0]))
-            execelse = False
+        if funstr.upper() == 'WHILE':
+            if len(args) != 2:
+                raise TypeError("While takes exactly 2 arguments ("+str(len(args))+" given)")
+            test = evalbool(args[0])
+            while test:
+                retval = exec_func(*args[1])
+                test = evalbool(args[0])
+        elif funstr.upper() == 'IF':
+            if len(args) < 2:
+                pass
             while len(args) > 1:
-                if args[0]:
-                    retval = exec_func(*args[1])
-                    execelse = True
+                test = evalbool(args[0])
+                if test:
+                    if not isinstance(args[1], tuple):
+                        retval = args[1]
+                    else:
+                        retval = exec_func(*args[1])
                     break
                 else:
-                    args = args[2:]
-            if len(args) == 1:
-                retval = exec_func(*args[0])
+                    if len(args) == 3:
+                        if not isinstance(args[2], tuple):
+                            retval = args[2]
+                        else:
+                            retval = exec_func(*args[2])
+                        break
+                    else:
+                        args = args[2:]
         elif funstr.upper() == 'FILE':
-            if type(args[0]) != type(str()) or type(args[1]) != type(str()):
-                    raise Exception("Arguments must be variables or a variable and a filename")
-            varlist[varname[0]] = open(args[1], 'a+')
-            retval = varlist[varname[0]]
+            if len(args) != 2:
+                raise TypeError("File takes exactly 2 arguments ("+str(len(args))+" given)")
+            varname = args[0]
+            filename = args[1]
+            if varname not in varlist:
+                raise NameError("Variable "+varname+" not found")
+            if not isinstance(filename, basestring):
+                raise TypeError("Filename must be a string or a variable")
+            if filename[0] != '"' and filename[0] != "'":
+                if filename not in varlist:
+                    raise NameError("Variable "+filename+" not found")
+                else:
+                    filename = varlist[filename]
+                    if not isinstance(filename, basestring):
+                        raise TypeError("Filename must be a string or a variable")
+            varlist[varname] = open(filename, 'a+')
+            retval = varlist[varname]
         elif funstr.upper() == 'PUSH':
-            if type(args[0]) == type(sys.stdin):
-                raise Exception("Argument one of push cannot be a file")
-            if testtype == type(sys.stdin):
-                pushfunc = type(sys.stdin).write
-            elif testtype == type(list()):
+            varname = [False, False]
+            if isinstance(args[0], file):
+                raise TypeError("Argument one of push cannot be a file")
+            for arg in args:
+                if isinstance(args[arg], basestring):
+                    if args[arg][0] != '"' and args[arg][0] != "'":
+                        if args[arg] not in varlist:
+                            raise NameError("Variable "+args[arg]+" not found")
+                        else:
+                            varname[arg] = args[arg]
+                            args[arg] = varlist[args[arg]]
+            if isinstance(args[1], file):
+                pushfunc = file.write
+            elif isinstance(arg[1], list):
                 pushfunc = type(list()).append
             else:
                 pushfunc = testtype.__add__
-                if type(args[0]) == type(list()) and testtype == type(int()):
-                    raise Exception("Can't push a list onto int")
-                args[0] = testtype(args[0])
+                if isinstance(args[1], int):
+                    if isinstance(args[0], list):
+                        raise Exception("Can't push a list onto int")
+                    else:
+                        while not isinstance(args[0], int):
+                            try:
+                                args[0] = int(args[0])
+                            except ValueError:
+                                if args[0] != '':
+                                    args[0] = args[0][:-1]
+                                else:
+                                    args[0] = 0
+                elif isinstance(args[1], basestring):
+                    args[0] = str(args[1])
+                else:
+                    raise Exception("What the fuckety fuck is going on?")
             if args[1] == sys.__stdout__:
                 args[0] = str(args[0])
                 pushfunc(args[1], args[0])
@@ -336,21 +362,14 @@ def exec_func(funstr, origargs, anon=False):
                     if args[0][-1] != '\n':
                         pushfunc(args[1],'\n')
             else:
-                if type(args[1]) == type(list()) or type(args[1]) == type(sys.stdin):
+                if isinstance(args[1], file) or isinstance(args[1], list):
                     pushfunc(args[1], args[0])
                 else:
                     args[1] = pushfunc(args[1], args[0])
                     if args[1] == '[]':
                         args[1] = []
-                if 1 in varname:
-                    if type(args[1]) == type(list()):
-                        varlist[varname[1]] = args[1]
-                    else:
-                        varlist[varname[1]] = args[1]
-                        try:
-                            varlist[varname[1]] = int(varlist[varname[1]])
-                        except ValueError:
-                            varlist[varname[1]] = '"' + args[1] + '"'
+            if varname[1]:
+                varlist[varname[1]] = args[1]
             retval = args[1]
         elif funstr.upper() == 'POP':
             if testtype == type(bool()):
@@ -395,12 +414,6 @@ def exec_func(funstr, origargs, anon=False):
             raise Exception("This function is both defined and undefined")
     else:
         funstr = funstr.upper()
-        if '~' in funstr:
-            tilde = True
-            funstrvar = funstr[1:].lower()
-            funstr = varlist[funstrvar][0]
-        else:
-            tilde = False
         cutoff = 0
         grabbed = funcs
         while cutoff < len(funstr):

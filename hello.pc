@@ -10,13 +10,11 @@
 ##
 
 _MAIN():
-	_PrintAndEcho(x):
-		Push(x, stdout)
+	_PrintAndEcho():
+		Push("Type QUIT to exit:", stdout)
 		Pop(x, stdin)
 		Push(x, stdout)
 	;
-	Main.PrintAndEcho("Enter your name")
-	Push("Hello ", y)
-	Push(x, y)
-	Main.PrintAndEcho(y)
+	Push("", x)
+	While(!(x="QUIT"), Main.PrintAndEcho())
 ;
