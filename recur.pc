@@ -1,12 +1,14 @@
 _MAIN():
 	Pop(x, stdin)
-	Push(Fac(x), z)
-	Push(z, stdout)
+	Fac(x)
+	Push(x, stdout)
 ;
 
 _Fac(n):
+	Push(0, m)
 	Push(n, m)
 	Pop(1, m)
+	Push(n, stdout)
 	IF(
 		(m>1),
 		Push(Multiply(n,Fac(m)), o),

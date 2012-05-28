@@ -1,5 +1,3 @@
-@stuff
-
 # commented
 ## also commented
 ## # thing
@@ -10,11 +8,11 @@
 ##
 
 _MAIN():
-	_PrintAndEcho():
+	_Loop():
 		Push("Type QUIT to exit:", stdout)
 		Pop(x, stdin)
 		Push(x, stdout)
 	;
 	Push("", x)
-	While(!(x="QUIT"), Main.PrintAndEcho())
+	While(!(x="QUIT"), Main.Loop())
 ;

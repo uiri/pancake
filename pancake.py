@@ -14,7 +14,7 @@ tokens = ('INT', 'STR', 'FUNC', 'VAR', 'IMPORT')
 t_STR = '("([^"]+)?"|\'([^\']+)?\')'
 t_IMPORT = '@[-A-Za-z0-9]+'
 
-literals = ".,_()[]:;<>=&|!"
+literals = ".,_()[]:;<>=&|!*"
 
 def t_INT(t):
     '\d+'
@@ -49,8 +49,10 @@ lexer.input(progread)
 for tok in lexer:
     print tok
 
-#varlist = {}
-varlist = {'stdin': sys.stdin, 'stdout': sys.__stdout__, 'stderr': sys.stderr}
+varlist = {}
+prevdefinedfunc = False
+storevars = []
+globalvars = {'stdin': sys.stdin, 'stdout': sys.__stdout__, 'stderr': sys.stderr}
 statementcounter = 0
 
 def p_statementlist(p):
@@ -93,16 +95,32 @@ def p_functiondef(p):
     func['__args'] = {}
     for s in xrange(len(p[3])):
         func['__args'][p[3][s]] = s
+    global prevdefinedfunc
+    global varlist
+    if prevdefinedfunc:
+        varlist[prevdefinedfunc] = {}
+        while storevars != []:
+            varadd = storevars.pop()
+            for variable in varadd.items():
+                if variable[0] not in globalvars:
+                    varlist[prevdefinedfunc] = dict(varlist[prevdefinedfunc].items() + [variable])
+    prevdefinedfunc = p[2]
     p[0] = (p[2], func)
     print "FUNCTIONDEF: ", p[0]
 
-"""def p_anonfunctiondef(p):
+def p_anonfunctiondef(p):
     'anonfunctiondef : "_" "*" arguments ":" statementlist ";"'
     func = p[5]
     func['__args'] = {}
     for s in xrange(len(p[3])):
         func['__args'][p[3][s]] = s
-    p[0] = (func, p[3], True)"""
+    func['__vars'] = {}
+    while storevars != []:
+        varadd = storevars.pop()
+        for variable in varadd.items():
+            if variable[0] not in globalvars:
+                func['__vars'] = dict(func['__vars'].items() + [variable])
+    p[0] = (func, p[3], True)
 
 def p_functioncall(p):
     'functioncall : functionname arguments'
@@ -165,9 +183,8 @@ def p_argument_intorstr(p):
 
 def p_argument_variable(p):
     'argument : VAR'
-    global varlist
-    if p[1] not in varlist:
-        varlist[p[1]] = ''
+    global storevars
+    storevars.append({p[1]: 0})
     p[0] = p[1]
 
 def p_argument_stack(p):
@@ -189,41 +206,61 @@ def p_argument_bool(p):
         p[0]['bool'] = p[3]
         p[0]['not'] = True
 
-"""def p_argument_anon(p):
+def p_argument_anon(p):
     'argument : anonfunctiondef'
-    p[0] = p[1]"""
+    p[0] = p[1]
 
 parser = yacc.yacc()
 definedfunctions = ['PUSH', 'POP', 'IF', 'FILE', 'WHILE']
 
 def evalcomp(comp):
     comp.reverse()
-    res = False
+    res = True
     stack = ['']
     compops = ['=', '<', '>']
     while comp != []:
+        if res == False:
+            break
         oper = stack.pop()
         next = comp.pop()
-        if type(next) == type(str()):
-            if next[0] in string.ascii_lowercase:
+        if isinstance(next, basestring):
+            if (next[0] != "'" or next[0] != '"') and next in varlist:
                 next = varlist[next]
-        if type(next) == type(str()):
+        if isinstance(next, basestring):
             if next == '':
                 next = []
-            elif (next[0] == ('"' or "'") and next[-1] == ('"' or "'")):
+            elif next[0] == "'" or next[0] == '"':
                 next = list(next)
                 next = next[1:-1]
+        if isinstance(next, dict):
+            next = evalbool(next)
+        if isinstance(next, bool):
+            next = int(next)
         if oper in compops:
             prev = stack.pop()
-            if oper == '=':
-                oper = '=='
-            if type(next) == type(int()) and type(prev) != type(next):
-                prev = len(prev)
-            if type(prev) == type(int()) and type(prev) != type(next):
-                next = len(next)
-            res = eval(str(prev) + str(oper) + str(next))
-            if oper == '==':
-                oper = '='
+            if oper == '<' or oper == '>':
+                if not isinstance(next, int):
+                    next = len(next)
+                if not isinstance(prev, int):
+                    prev = len(prev)
+                if (oper == '<' and prev < next) or (oper == '>' and prev > next):
+                    res = False
+            else:
+                if isinstance(prev, int) and not isinstance(next, int):
+                    next = len(next)
+                if isinstance(next, int) and not isinstance(prev, int):
+                    prev = len(prev)
+                if isinstance(next, int):
+                    if next != prev:
+                        res = False
+                else:
+                    if len(next) != len(prev):
+                        res = False
+                    else:
+                        for i in xrange(len(next)):
+                            if next[i] != prev[i]:
+                                res = False
+                                break
             stack.append(prev)
         stack.append(oper)
         stack.append(next)
@@ -232,13 +269,15 @@ def evalcomp(comp):
 
 def evalbool(boolexpr):
     try:
-        boolean = boolexpr['bool']
+        boolean = copy.deepcopy(boolexpr['bool'])
         notbool = boolexpr['not']
     except TypeError:
         if boolexpr == "False":
             return False
         else:
             return bool(boolexpr)
+    except KeyError:
+        raise KeyError("What fresh hell is this dict which is not a boolean")
     boollist = []
     boolops = ['|', '&']
     for comp in boolean:
@@ -272,9 +311,11 @@ def exec_func(funstr, origargs, anon=False):
     retval = 0
     args = copy.deepcopy(origargs)
     varname = {}
+    scope = False
     if anon:
         grabbed = funstr
     elif funstr.upper() in definedfunctions:
+        localvars = dict(storevars[-1].items() + globalvars.items())
         grabbed = False
         if funstr.upper() == 'WHILE':
             if len(args) != 2:
@@ -308,40 +349,62 @@ def exec_func(funstr, origargs, anon=False):
                 raise TypeError("File takes exactly 2 arguments ("+str(len(args))+" given)")
             varname = args[0]
             filename = args[1]
-            if varname not in varlist:
+            if varname not in localvars:
                 raise NameError("Variable "+varname+" not found")
             if not isinstance(filename, basestring):
                 raise TypeError("Filename must be a string or a variable")
             if filename[0] != '"' and filename[0] != "'":
-                if filename not in varlist:
+                if filename not in localvars:
                     raise NameError("Variable "+filename+" not found")
                 else:
-                    filename = varlist[filename]
+                    filename = localvars[filename]
                     if not isinstance(filename, basestring):
                         raise TypeError("Filename must be a string or a variable")
-            varlist[varname] = open(filename, 'a+')
-            retval = varlist[varname]
+            if isinstance(filename, basestring):
+                filename = filename[1:-1]
+            localvars[varname] = open(filename, 'a+')
+            retval = localvars[varname]
         elif funstr.upper() == 'PUSH':
             varname = [False, False]
             if isinstance(args[0], file):
                 raise TypeError("Argument one of push cannot be a file")
-            for arg in args:
+            for arg in xrange(len(args)):
                 if isinstance(args[arg], basestring):
                     if args[arg][0] != '"' and args[arg][0] != "'":
-                        if args[arg] not in varlist:
+                        if args[arg] not in localvars:
                             raise NameError("Variable "+args[arg]+" not found")
                         else:
                             varname[arg] = args[arg]
-                            args[arg] = varlist[args[arg]]
+                            args[arg] = localvars[args[arg]]
+                    if isinstance(args[arg], basestring):
+                        if args[arg] != '':
+                            if args[arg][0] == '"' or args[arg][0] == "'":
+                                args[arg] = args[arg][1:-1]
+                if isinstance(args[arg], dict):
+                    try:
+                        boolexpr = args[arg]['bool']
+                        boolnot = args[arg]['not']
+                        args[arg] = evalbool(args[arg])
+                    except KeyError:
+                        raise KeyError("What is in this dict I don't even: "+str(args[arg]))
+            if isinstance(args[0], bool):
+                if isinstance(args[1], file):
+                    args[0] = str(args[0])
+                else:
+                    args[0] = int(args[0])
             if isinstance(args[1], file):
                 pushfunc = file.write
-            elif isinstance(arg[1], list):
-                pushfunc = type(list()).append
+            elif isinstance(args[1], list):
+                pushfunc = list.append
             else:
-                pushfunc = testtype.__add__
+                boolean = False
+                if isinstance(args[1], bool):
+                    boolean = True
+                    args[1] = int(args[1])
+                pushfunc = type(args[1]).__add__
                 if isinstance(args[1], int):
                     if isinstance(args[0], list):
-                        raise Exception("Can't push a list onto int")
+                        raise Exception("Can't push a stack onto int")
                     else:
                         while not isinstance(args[0], int):
                             try:
@@ -352,7 +415,7 @@ def exec_func(funstr, origargs, anon=False):
                                 else:
                                     args[0] = 0
                 elif isinstance(args[1], basestring):
-                    args[0] = str(args[1])
+                    args[0] = str(args[0])
                 else:
                     raise Exception("What the fuckety fuck is going on?")
             if args[1] == sys.__stdout__:
@@ -368,26 +431,57 @@ def exec_func(funstr, origargs, anon=False):
                     args[1] = pushfunc(args[1], args[0])
                     if args[1] == '[]':
                         args[1] = []
+                    if boolean:
+                        args[1] = bool(args[1])
             if varname[1]:
-                varlist[varname[1]] = args[1]
+                localvars[varname[1]] = args[1]
             retval = args[1]
         elif funstr.upper() == 'POP':
-            if testtype == type(bool()):
+            varname = [False, False]
+            if isinstance(args[0], file):
+                raise TypeError("Argument one of pop cannot be a file")
+            if isinstance(args[0], list):
+                raise TypeError("Argument one of pop cannot be a stack")
+            for arg in xrange(len(args)):
+                if isinstance(args[arg], basestring):
+                    if args[arg][0] != '"' and args[arg][0] != "'":
+                        if args[arg] not in localvars:
+                            raise NameError("Variable "+args[arg]+" not found")
+                        else:
+                            varname[arg] = args[arg]
+                            args[arg] = localvars[args[arg]]
+                    if isinstance(args[arg], basestring):
+                        args[arg] = args[arg][1:-1]
+                if isinstance(args[arg], dict):
+                    try:
+                        boolexpr = args[arg]['bool']
+                        boolnot = args[arg]['not']
+                        args[arg] = evalbool(args[arg])
+                    except KeyError:
+                        raise KeyError("What is in this dict I don't even: "+str(args[arg]))
+            if isinstance(args[0], bool):
+                args[0] = int(args[0])
+            boolean = False
+            if isinstance(args[1], bool):
+                boolean = True
+                args[1] = int(args[1])
                 def popfunc(x):
-                    y = x
-                    args[1] = ''
-                    return y
-            elif testtype == type(sys.stdin):
+                    args[1] = 1
+                    return 1
+            elif isinstance(args[1], file):
                 def popfunc(x):
-                    y = '"'+x.readline()+'"'
+                    y = x.readline()
+                    if y[-1] == '\n':
+                        y = y[:-1]
+                    y = '"'+y+'"'
                     return y
-            elif testtype == type(list()):
+            elif isinstance(args[1], list):
                 if args[1] == []:
                     def popfunc(x):
                         return []
                 else:
-                    popfunc = type(list()).pop
-            elif testtype == type(int()):
+                    popfunc = list.pop
+            elif isinstance(args[1], int):
                 def popfunc(x):
                     args[1] -= 1
                     return 1
@@ -400,15 +494,15 @@ def exec_func(funstr, origargs, anon=False):
                         y = args[1].pop()
                     args[1] = '"'+''.join(args[1])+'"'
                     return '"'+y+'"'
-            if type(args[0]) == type(int()):
+            if isinstance(args[0], int):
                 for popcount in xrange(args[0]):
                     popfunc(args[1])
             elif varname[0]:
-                varlist[varname[0]] = popfunc(args[1])
-            else:
-                raise Exception("First argument must be integer or variable")
-            if 1 in varname:
-                varlist[varname[1]] = args[1]
+                localvars[varname[0]] = popfunc(args[1])
+            if boolean:
+                args[1] = bool(args[1])
+            if varname[1]:
+                localvars[varname[1]] = args[1]
             retval = args[1]
         else:
             raise Exception("This function is both defined and undefined")
@@ -416,29 +510,50 @@ def exec_func(funstr, origargs, anon=False):
         funstr = funstr.upper()
         cutoff = 0
         grabbed = funcs
+        scope = varlist
+        print varlist
         while cutoff < len(funstr):
             if '.' in funstr[cutoff:]:
                 newcutoff = funstr[cutoff:].index('.')
                 grabbed = grabbed[funstr[cutoff:newcutoff]]
+                scope = varlist[funstr[cutoff:newcutoff]]
                 cutoff = newcutoff+1
             else:
                 grabbed = grabbed[funstr[cutoff:]]
+                scope = varlist[funstr[cutoff:]]
                 cutoff = len(funstr)
-        if tilde:
-            args = varlist[funstrvar][1]
-            anon = True
     if grabbed:
+        if scope:
+            scope = copy.deepcopy(scope)
         if not anon:
             for argu in grabbed['__args']:
-                varlist[argu] = args[grabbed['__args'][argu]]
+                if argu in scope:
+                    scope[argu] = args[grabbed['__args'][argu]]
+                    if scope[argu] in storevars[-1]:
+                        scope[argu] = storevars[-1][scope[argu]]
+        storevars.append(scope)
         sorteditems = sorted(copy.copy(grabbed))
         for item in sorteditems:
             if type(item) != type(int()):
                 continue
             myitem = grabbed[item]
+            for ar in xrange(len(myitem[1])):
+                if isinstance(myitem[1][ar], basestring):
+                    if myitem[1][ar] in varlist:
+                        if varlist[myitem[1][ar]] in varlist:
+                            myitem[1][ar] = varlist[myitem[1][ar]]
             retval = exec_func(*myitem)
+        storevars.pop()
     return retval
 
+print prevdefinedfunc
+if prevdefinedfunc:
+    varlist[prevdefinedfunc] = {}
+    while storevars != []:
+        varadd = storevars.pop()
+        for variable in varadd.items():
+            if variable[0] not in globalvars:
+                varlist[prevdefinedfunc] = dict(varlist[prevdefinedfunc].items() + [variable])
 if len(sys.argv) == 1:
     funcs = {}
     parsed = True
