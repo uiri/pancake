@@ -1,29 +1,24 @@
 _MAIN():
 	Pop(x, stdin)
-	Fac(x)
-	Push(x, stdout)
+	Push(Fac(x), stdout)
 ;
 
 _Fac(n):
-	Push(0, m)
-	Push(n, m)
-	Pop(1, m)
-	Push(n, stdout)
-	IF(
-		(m>1),
-		Push(Multiply(n,Fac(m)), o),
-		Push(m, o)
+	Push(n,m)
+	Pop(1,n)
+	If(
+		(n>0),
+		Push(Multiply(Fac(n),n), m),
+		Push(1,n)
 	)
-	Push(0,o)
+	Push(0,n)
 ;
 
-_Multiply(a,b,c):
-	Push(a, c)
+_Multiply(a,b):
 	Pop(1, b)
-	Push(b, stdout)
-	IF(
-		(b>0),
-		Multiply(a,b,c),
-		Push(0,c)
+	If(
+		(b>1),
+		Push(Multiply(a,b), a),
+		Push(0,a)
 	)
 ;

@@ -17,7 +17,7 @@ t_IMPORT = '@[-A-Za-z0-9]+'
 literals = ".,_()[]:;<>=&|!*"
 
 def t_INT(t):
-    '\d+'
+    '-?\d+'
     t.value = int(t.value)
     return t
 
@@ -224,8 +224,8 @@ def evalcomp(comp):
         oper = stack.pop()
         next = comp.pop()
         if isinstance(next, basestring):
-            if (next[0] != "'" or next[0] != '"') and next in varlist:
-                next = varlist[next]
+            if (next[0] != "'" or next[0] != '"') and next in storevars[-1]:
+                next = storevars[-1][next]
         if isinstance(next, basestring):
             if next == '':
                 next = []
@@ -243,7 +243,7 @@ def evalcomp(comp):
                     next = len(next)
                 if not isinstance(prev, int):
                     prev = len(prev)
-                if (oper == '<' and prev < next) or (oper == '>' and prev > next):
+                if (oper == '<' and prev > next) or (oper == '>' and prev < next):
                     res = False
             else:
                 if isinstance(prev, int) and not isinstance(next, int):
@@ -265,7 +265,6 @@ def evalcomp(comp):
         stack.append(oper)
         stack.append(next)
     return res
-        
 
 def evalbool(boolexpr):
     try:
@@ -368,6 +367,9 @@ def exec_func(funstr, origargs, anon=False):
             retval = localvars[varname]
         elif funstr.upper() == 'PUSH':
             varname = [False, False]
+            for arg in xrange(len(args)):
+                if isinstance(args[arg], tuple):
+                    args[arg] = exec_func(*args[arg])
             if isinstance(args[0], file):
                 raise TypeError("Argument one of push cannot be a file")
             for arg in xrange(len(args)):
@@ -429,6 +431,7 @@ def exec_func(funstr, origargs, anon=False):
                 elif isinstance(args[1], basestring):
                     args[0] = str(args[0])
                 else:
+                    print args
                     raise Exception("What the fuckety fuck is going on?")
             if args[1] == sys.__stdout__:
                 args[0] = str(args[0])
@@ -451,6 +454,9 @@ def exec_func(funstr, origargs, anon=False):
             retval = args[1]
         elif funstr.upper() == 'POP':
             varname = [False, False]
+            for arg in xrange(len(args)):
+                if isinstance(args[arg], tuple):
+                    args[arg] = exec_func(*args[arg])
             if isinstance(args[0], file):
                 raise TypeError("Argument one of pop cannot be a file")
             if isinstance(args[0], list):
@@ -541,9 +547,9 @@ def exec_func(funstr, origargs, anon=False):
             for argu in grabbed['__args']:
                 if argu in scope:
                     scope[argu] = args[grabbed['__args'][argu]]
-                    if scope[argu] in storevars[-1]:
-                        scope[argu] = storevars[-1][scope[argu]]
-        #if scope:
+                    if not isinstance(scope[argu], tuple):
+                        if scope[argu] in storevars[-1]:
+                            scope[argu] = storevars[-1][scope[argu]]
         storevars.append(scope)
         sorteditems = sorted(copy.copy(grabbed))
         for item in sorteditems:
