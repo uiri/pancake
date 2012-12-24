@@ -46,8 +46,8 @@ def t_error(t):
 lexer = lex.lex()
 
 lexer.input(progread)
-for tok in lexer:
-    print tok
+#for tok in lexer:
+    #print tok
 
 varlist = {}
 prevdefinedfunc = False
@@ -73,12 +73,12 @@ def p_statementlist(p):
             toadd = p[2]
     if type(toadd[1]) == type(dict()):
         p[0][toadd[0]] = toadd[1]
-        print "STATEMENTLIST WITH FUNCTIONDEF: ", p[0]
+        #print "STATEMENTLIST WITH FUNCTIONDEF: ", p[0]
     else:
         global statementcounter
         p[0][statementcounter] = toadd
         statementcounter += 1
-        print "STATEMENTLIST WITH FUNCTIONCALL: ", p[0]
+        #print "STATEMENTLIST WITH FUNCTIONCALL: ", p[0]
 
 def p_importlist(p):
     '''importlist : IMPORT
@@ -97,16 +97,15 @@ def p_functiondef(p):
         func['__args'][p[3][s]] = s
     global prevdefinedfunc
     global varlist
-    if prevdefinedfunc:
-        varlist[prevdefinedfunc] = {}
-        while storevars != []:
-            varadd = storevars.pop()
-            for variable in varadd.items():
-                if variable[0] not in globalvars:
-                    varlist[prevdefinedfunc] = dict(varlist[prevdefinedfunc].items() + [variable])
     prevdefinedfunc = p[2]
+    varlist[prevdefinedfunc] = {}
+    while storevars != []:
+        varadd = storevars.pop()
+        for variable in varadd.items():
+            if variable[0] not in globalvars:
+                varlist[prevdefinedfunc] = dict(varlist[prevdefinedfunc].items() + [variable])
     p[0] = (p[2], func)
-    print "FUNCTIONDEF: ", p[0]
+    #print "FUNCTIONDEF: ", p[0]
 
 def p_anonfunctiondef(p):
     'anonfunctiondef : "_" "*" arguments ":" statementlist ";"'
@@ -125,7 +124,7 @@ def p_anonfunctiondef(p):
 def p_functioncall(p):
     'functioncall : functionname arguments'
     p[0] = (p[1], p[2])
-    print "FUNCTIONCALL: ", p[2]
+    #print "FUNCTIONCALL: ", p[2]
 
 def p_functionname(p):
     '''functionname : FUNC
@@ -184,7 +183,8 @@ def p_argument_intorstr(p):
 def p_argument_variable(p):
     'argument : VAR'
     global storevars
-    storevars.append({p[1]: 0})
+    #print "STOREVAR : ", p[1]
+    storevars.append({p[1]: None})
     p[0] = p[1]
 
 def p_argument_stack(p):
@@ -363,6 +363,8 @@ def exec_func(funstr, origargs, anon=False):
             if isinstance(filename, basestring):
                 filename = filename[1:-1]
             localvars[varname] = open(filename, 'a+')
+            if varname in storevars[-1]:
+                storevars[-1][varname] = localvars[varname]
             retval = localvars[varname]
         elif funstr.upper() == 'PUSH':
             varname = [False, False]
@@ -387,6 +389,16 @@ def exec_func(funstr, origargs, anon=False):
                         args[arg] = evalbool(args[arg])
                     except KeyError:
                         raise KeyError("What is in this dict I don't even: "+str(args[arg]))
+            if args[0] == None:
+                try:
+                    args[0] = type(args[1])()
+                except TypeError:
+                    args[0] = ""
+            elif args[1] == None:
+                try:
+                    args[1] = type(args[0])()
+                except TypeError:
+                    args[1] = ""
             if isinstance(args[0], bool):
                 if isinstance(args[1], file):
                     args[0] = str(args[0])
@@ -433,8 +445,9 @@ def exec_func(funstr, origargs, anon=False):
                         args[1] = []
                     if boolean:
                         args[1] = bool(args[1])
-            if varname[1]:
-                localvars[varname[1]] = args[1]
+            if varname[1] in storevars[-1]:
+                storevars[-1][varname[1]] = args[1]
+            #print storevars
             retval = args[1]
         elif funstr.upper() == 'POP':
             varname = [False, False]
@@ -497,12 +510,12 @@ def exec_func(funstr, origargs, anon=False):
             if isinstance(args[0], int):
                 for popcount in xrange(args[0]):
                     popfunc(args[1])
-            elif varname[0]:
-                localvars[varname[0]] = popfunc(args[1])
+            elif varname[0] in storevars[-1]:
+                storevars[-1][varname[0]] = popfunc(args[1])
             if boolean:
                 args[1] = bool(args[1])
-            if varname[1]:
-                localvars[varname[1]] = args[1]
+            if varname[1] in storevars[-1]:
+                storevars[-1][varname[1]] = args[1]
             retval = args[1]
         else:
             raise Exception("This function is both defined and undefined")
@@ -511,7 +524,6 @@ def exec_func(funstr, origargs, anon=False):
         cutoff = 0
         grabbed = funcs
         scope = varlist
-        print varlist
         while cutoff < len(funstr):
             if '.' in funstr[cutoff:]:
                 newcutoff = funstr[cutoff:].index('.')
@@ -531,6 +543,7 @@ def exec_func(funstr, origargs, anon=False):
                     scope[argu] = args[grabbed['__args'][argu]]
                     if scope[argu] in storevars[-1]:
                         scope[argu] = storevars[-1][scope[argu]]
+        #if scope:
         storevars.append(scope)
         sorteditems = sorted(copy.copy(grabbed))
         for item in sorteditems:
@@ -546,14 +559,6 @@ def exec_func(funstr, origargs, anon=False):
         storevars.pop()
     return retval
 
-print prevdefinedfunc
-if prevdefinedfunc:
-    varlist[prevdefinedfunc] = {}
-    while storevars != []:
-        varadd = storevars.pop()
-        for variable in varadd.items():
-            if variable[0] not in globalvars:
-                varlist[prevdefinedfunc] = dict(varlist[prevdefinedfunc].items() + [variable])
 if len(sys.argv) == 1:
     funcs = {}
     parsed = True
@@ -579,11 +584,14 @@ if len(sys.argv) == 1:
             parsed = True
 else:
     funcs = parser.parse(progread)
+    #print storevars
+    #print funcs
+    #print type(funcs)
+    #print varlist
     if type(funcs) == type(tuple()):
         tempfuncs = {}
         tempfuncs[funcs[0]] = funcs[1]
         funcs = tempfuncs
-    print varlist
     constfuncs = copy.copy(funcs)
     for statement in constfuncs:
         if type(funcs[statement]) == type(tuple()):
@@ -596,5 +604,6 @@ else:
                     for e in importdefs:
                         if type(e) != type(int()):
                             funcs[importfilename.upper()][e] = importdefs[e]
-    print funcs
+    #print funcs
+    #print varlist
     exec_func('MAIN', [])
