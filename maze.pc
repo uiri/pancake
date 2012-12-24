@@ -1,0 +1,20 @@
+@stdlib
+
+_NextSquare(x, y, z, w):
+	Push([], returnlist)
+	Push(0, returnlist)
+	Pop(1, returnlist)
+;
+
+_Main():
+	File(mazefile, "../mazefile")
+	While(
+		(Outer(x, mazefile)>0)
+	)
+;
+
+_Outer(f, g):
+	Pop(f, g)
+	Stdlib.Print(f)
+	Push("", f)
+;

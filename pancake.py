@@ -46,8 +46,6 @@ def t_error(t):
 lexer = lex.lex()
 
 lexer.input(progread)
-#for tok in lexer:
-    #print tok
 
 varlist = {}
 prevdefinedfunc = False
@@ -73,12 +71,10 @@ def p_statementlist(p):
             toadd = p[2]
     if type(toadd[1]) == type(dict()):
         p[0][toadd[0]] = toadd[1]
-        #print "STATEMENTLIST WITH FUNCTIONDEF: ", p[0]
     else:
         global statementcounter
         p[0][statementcounter] = toadd
         statementcounter += 1
-        #print "STATEMENTLIST WITH FUNCTIONCALL: ", p[0]
 
 def p_importlist(p):
     '''importlist : IMPORT
@@ -105,7 +101,6 @@ def p_functiondef(p):
             if variable[0] not in globalvars:
                 varlist[prevdefinedfunc] = dict(varlist[prevdefinedfunc].items() + [variable])
     p[0] = (p[2], func)
-    #print "FUNCTIONDEF: ", p[0]
 
 def p_anonfunctiondef(p):
     'anonfunctiondef : "_" "*" arguments ":" statementlist ";"'
@@ -124,7 +119,6 @@ def p_anonfunctiondef(p):
 def p_functioncall(p):
     'functioncall : functionname arguments'
     p[0] = (p[1], p[2])
-    #print "FUNCTIONCALL: ", p[2]
 
 def p_functionname(p):
     '''functionname : FUNC
@@ -183,7 +177,6 @@ def p_argument_intorstr(p):
 def p_argument_variable(p):
     'argument : VAR'
     global storevars
-    #print "STOREVAR : ", p[1]
     storevars.append({p[1]: None})
     p[0] = p[1]
 
@@ -462,7 +455,6 @@ def exec_func(funstr, origargs, anon=False):
                         args[1] = '"'+args[1]+'"'
             if varname[1] in storevars[-1]:
                 storevars[-1][varname[1]] = args[1]
-            #print storevars
             retval = args[1]
         elif funstr.upper() == 'POP':
             varname = [False, False]
@@ -502,8 +494,9 @@ def exec_func(funstr, origargs, anon=False):
             elif isinstance(args[1], file):
                 def popfunc(x):
                     y = x.readline()
-                    if y[-1] == '\n':
-                        y = y[:-1]
+                    if y != '':
+                        if y[-1] == '\n':
+                            y = y[:-1]
                     y = '"'+y+'"'
                     return y
             elif isinstance(args[1], list):
@@ -550,7 +543,7 @@ def exec_func(funstr, origargs, anon=False):
                 cutoff = newcutoff+1
             else:
                 grabbed = grabbed[funstr[cutoff:]]
-                scope = varlist[funstr[cutoff:]]
+                scope = scope[funstr[cutoff:]]
                 cutoff = len(funstr)
     if grabbed:
         if scope:
@@ -600,14 +593,11 @@ if len(sys.argv) == 1:
             parsed = parser.parse(s)
             for e in parsed:
                 funcs[e] = parsed[e]
-            print "=> ", exec_func(parsed, [], True)
+            tmprtv = exec_func(parsed, [], True)
+            print "=> ", tmprtv
             parsed = True
 else:
     funcs = parser.parse(progread)
-    #print storevars
-    #print funcs
-    #print type(funcs)
-    #print varlist
     if type(funcs) == type(tuple()):
         tempfuncs = {}
         tempfuncs[funcs[0]] = funcs[1]
@@ -617,6 +607,8 @@ else:
         if type(funcs[statement]) == type(tuple()):
             if funcs[statement][0] == 'IMPORT':
                 for importfilename in funcs[statement][1]:
+                    constvarlist = copy.copy(varlist)
+                    varlist = {}
                     funcs[importfilename.upper()] = {}
                     importfile = open(importfilename+".pc")
                     importread = importfile.read()
@@ -624,6 +616,5 @@ else:
                     for e in importdefs:
                         if type(e) != type(int()):
                             funcs[importfilename.upper()][e] = importdefs[e]
-    #print funcs
-    #print varlist
+                    varlist = dict(constvarlist.items() + { importfilename.upper() : dict(varlist.items())}.items())
     exec_func('MAIN', [])

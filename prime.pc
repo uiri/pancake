@@ -1,6 +1,7 @@
 @stdlib
 
 _Main():
+	Push(0, z)
 	Stdlib.Print("Which prime do you want?:")
 	Pop(z, stdin)
 	Push([], x)
@@ -16,14 +17,11 @@ _Main():
 			Main.Outer()
 		)
 	;
-	_Inner(prime):
+	_Inner():
 		If(
 			(prime>bignum),
 			Push(y, x),
 			Main.CheckPrime()
 		)
-	;
-	
-	_CheckPrime():
-		
+	;	
 ;
