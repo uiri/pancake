@@ -12,7 +12,7 @@ _MAIN():
 		Push("Type QUIT to exit:", stdout)
 		Pop(x, stdin)
 		Push(x, stdout)
+		Push("", x)
 	;
-	Push("", x)
-	While(!(x="QUIT"), Main.Loop())
+	While(!(Main.Loop()="QUIT"))
 ;

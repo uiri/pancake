@@ -223,9 +223,13 @@ def evalcomp(comp):
             break
         oper = stack.pop()
         next = comp.pop()
+        if isinstance(next, tuple):
+            next = exec_func(*next)
         if isinstance(next, basestring):
-            if (next[0] != "'" or next[0] != '"') and next in storevars[-1]:
-                next = storevars[-1][next]
+            if next[0] != "'" or next[0] != '"':
+                for i in reversed(xrange(len(storevars))):
+                    if next in storevars[i]:
+                        next = storevars[i][next]
         if isinstance(next, basestring):
             if next == '':
                 next = []
@@ -317,11 +321,12 @@ def exec_func(funstr, origargs, anon=False):
         localvars = dict(storevars[-1].items() + globalvars.items())
         grabbed = False
         if funstr.upper() == 'WHILE':
-            if len(args) != 2:
-                raise TypeError("While takes exactly 2 arguments ("+str(len(args))+" given)")
+            if len(args) != 2 and len(args) != 1:
+                raise TypeError("While takes 1 or 2 arguments ("+str(len(args))+" given)")
             test = evalbool(args[0])
             while test:
-                retval = exec_func(*args[1])
+                if len(args) == 2:
+                    retval = exec_func(*args[1])
                 test = evalbool(args[0])
         elif funstr.upper() == 'IF':
             if len(args) < 2:
@@ -434,11 +439,16 @@ def exec_func(funstr, origargs, anon=False):
                     print args
                     raise Exception("What the fuckety fuck is going on?")
             if args[1] == sys.__stdout__:
-                args[0] = str(args[0])
+                isstring = False
+                if isinstance(args[0], basestring):
+                    isstring = True
+                else:
+                    args[0] = str(args[0])
                 pushfunc(args[1], args[0])
                 if args[0] != '':
                     if args[0][-1] != '\n':
                         pushfunc(args[1],'\n')
+                args[0] = '"'+args[0]+'"'
             else:
                 if isinstance(args[1], file) or isinstance(args[1], list):
                     pushfunc(args[1], args[0])
@@ -448,6 +458,8 @@ def exec_func(funstr, origargs, anon=False):
                         args[1] = []
                     if boolean:
                         args[1] = bool(args[1])
+                    if isinstance(args[1], basestring):
+                        args[1] = '"'+args[1]+'"'
             if varname[1] in storevars[-1]:
                 storevars[-1][varname[1]] = args[1]
             #print storevars
@@ -550,7 +562,8 @@ def exec_func(funstr, origargs, anon=False):
                     if not isinstance(scope[argu], tuple):
                         if scope[argu] in storevars[-1]:
                             scope[argu] = storevars[-1][scope[argu]]
-        storevars.append(scope)
+        if scope != False:
+            storevars.append(scope)
         sorteditems = sorted(copy.copy(grabbed))
         for item in sorteditems:
             if type(item) != type(int()):
@@ -562,7 +575,8 @@ def exec_func(funstr, origargs, anon=False):
                         if varlist[myitem[1][ar]] in varlist:
                             myitem[1][ar] = varlist[myitem[1][ar]]
             retval = exec_func(*myitem)
-        storevars.pop()
+        if scope != False:
+            storevars.pop()
     return retval
 
 if len(sys.argv) == 1:

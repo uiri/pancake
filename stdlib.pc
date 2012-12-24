@@ -1,7 +1,13 @@
 _MAIN():
-	Pop(x, stdin)
-	Pop(y, stdin)
-	Pop(z, stdin)
+	Push(0, x)
+	Pop(a, stdin)
+	Push(a, x)
+	Push(0, y)
+	Pop(a, stdin)
+	Push(a, y)
+	Push(0, z)
+	Pop(a, stdin)
+	Push(a, z)
 	If (
 		(x>y),
 		If (

@@ -8,8 +8,6 @@ _MAIN():
 			Push("Falsehood", stdout)
 		;
 	)
-	_*():
-		Push("Hrm", stdout)
-		Push("Hmrmrmrmrrrm", stdout)
-	;
+	Push("Hrm", stdout)
+	Push("Hmrmrmrmrrrm", stdout)
 ;

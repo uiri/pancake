@@ -2,3 +2,6 @@ _Echo():
 	Pop(x, stdin)
 	Push(x, stdout)
 ;
+_Main():
+	Echo()
+;

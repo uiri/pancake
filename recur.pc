@@ -1,24 +1,20 @@
 _MAIN():
+	Push(0, y)
 	Pop(x, stdin)
-	Push(Fac(x), stdout)
+	Push(x, y)
+	Push(Fac(y), stdout)
 ;
 
 _Fac(n):
-	Push(n,m)
-	Pop(1,n)
-	If(
-		(n>0),
-		Push(Multiply(Fac(n),n), m),
-		Push(1,n)
+	Push(1,m)
+	While( (Pop(1,n)>0),
+		Push(Multiply(n,m,0), m)
 	)
-	Push(0,n)
 ;
 
-_Multiply(a,b):
-	Pop(1, b)
-	If(
-		(b>1),
-		Push(Multiply(a,b), a),
-		Push(0,a)
+_Multiply(a,b,c):
+	While(
+		(Pop(1,b)>0),
+		Push(a, c)
 	)
 ;
