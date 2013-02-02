@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 import ply.lex as lex
 import ply.yacc as yacc
-import sys, copy, string
+import sys, copy, string, urllib2
+sys.tracebacklimit = 0
 
 if len(sys.argv) > 1:
     progfile = open(sys.argv[1])
@@ -359,7 +360,10 @@ def exec_func(funstr, origargs, anon=False):
                         raise TypeError("Filename must be a string or a variable")
             if isinstance(filename, basestring):
                 filename = filename[1:-1]
-            localvars[varname] = open(filename, 'a+')
+            if filename[:7] == "http://":
+                localvars[varname] = urllib2.urlopen(filename)
+            else:
+                localvars[varname] = open(filename, 'a+')
             if varname in storevars[-1]:
                 storevars[-1][varname] = localvars[varname]
             retval = localvars[varname]

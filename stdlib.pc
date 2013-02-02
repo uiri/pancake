@@ -6,3 +6,25 @@ _Scan(x):
 	Pop(x, stdin)
 	Push("", x)
 ;
+
+_ReadFile(file):
+	Push("", ret)
+	Pop(ret, file)
+	While(
+		!(Push(Pop(y, file), z)=""),
+		_*():
+			Push(z, ret)
+			Pop(Length(z), z)
+		;
+	)
+	Push("", ret)
+;
+
+_Length(x):
+	Push(1,y)
+	While(
+		!(Pop(1,x)=""),
+		Push(1, y)
+	)
+	Stdlib.Print(y)
+;
