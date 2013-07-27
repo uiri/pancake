@@ -75,6 +75,9 @@ def p_statementlist(p):
     else:
         global statementcounter
         p[0][statementcounter] = toadd
+        for var in xrange(len(storevars)):
+            if storevars[var][1] == None:
+                storevars[var] = (storevars[var][0], statementcounter)
         statementcounter += 1
 
 def p_importlist(p):
@@ -94,13 +97,16 @@ def p_functiondef(p):
         func['__args'][p[3][s]] = s
     global prevdefinedfunc
     global varlist
+    global storevars
     prevdefinedfunc = p[2]
     varlist[prevdefinedfunc] = {}
-    while storevars != []:
-        varadd = storevars.pop()
-        for variable in varadd.items():
-            if variable[0] not in globalvars:
-                varlist[prevdefinedfunc] = dict(varlist[prevdefinedfunc].items() + [variable])
+    for variable in reversed(range(len(storevars))):
+        varadd = storevars[variable]
+        if varadd[1] in func.keys():
+            varadd = (varadd[0], None)
+            if varadd[0] not in globalvars:
+                varlist[prevdefinedfunc] = dict(varlist[prevdefinedfunc].items() + [varadd])
+                storevars.pop(variable)
     p[0] = (p[2], func)
 
 def p_anonfunctiondef(p):
@@ -110,11 +116,11 @@ def p_anonfunctiondef(p):
     for s in xrange(len(p[3])):
         func['__args'][p[3][s]] = s
     func['__vars'] = {}
-    while storevars != []:
-        varadd = storevars.pop()
-        for variable in varadd.items():
-            if variable[0] not in globalvars:
-                func['__vars'] = dict(func['__vars'].items() + [variable])
+    for varadd in storevars:
+        if varadd[1] in func.keys():
+            varadd = (varadd[0], None)
+            if varadd[0] not in globalvars:
+                func['__vars'] = dict(func['__vars'].items() + [varadd])
     p[0] = (func, p[3], True)
 
 def p_functioncall(p):
@@ -178,7 +184,7 @@ def p_argument_intorstr(p):
 def p_argument_variable(p):
     'argument : VAR'
     global storevars
-    storevars.append({p[1]: None})
+    storevars.append((p[1], None))
     p[0] = p[1]
 
 def p_argument_stack(p):
@@ -241,7 +247,7 @@ def evalcomp(comp):
                     next = len(next)
                 if not isinstance(prev, int):
                     prev = len(prev)
-                if (oper == '<' and prev > next) or (oper == '>' and prev < next):
+                if (oper == '<' and prev >= next) or (oper == '>' and prev <= next):
                     res = False
             else:
                 if isinstance(prev, int) and not isinstance(next, int):
@@ -547,7 +553,7 @@ def exec_func(funstr, origargs, anon=False):
                 cutoff = newcutoff+1
             else:
                 grabbed = grabbed[funstr[cutoff:]]
-                scope = scope[funstr[cutoff:]]
+                scope = varlist[funstr[cutoff:]]
                 cutoff = len(funstr)
     if grabbed:
         if scope:
@@ -613,6 +619,7 @@ else:
                 for importfilename in funcs[statement][1]:
                     constvarlist = copy.copy(varlist)
                     varlist = {}
+                    prevdefinedfunc = False
                     funcs[importfilename.upper()] = {}
                     importfile = open(importfilename+".pc")
                     importread = importfile.read()
@@ -620,5 +627,5 @@ else:
                     for e in importdefs:
                         if type(e) != type(int()):
                             funcs[importfilename.upper()][e] = importdefs[e]
-                    varlist = dict(constvarlist.items() + { importfilename.upper() : dict(varlist.items())}.items())
+                    varlist = dict(constvarlist.items() + [(importfilename.upper(), {})] + varlist.items())
     exec_func('MAIN', [])
