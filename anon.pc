@@ -1,6 +1,7 @@
 _MAIN():
+	Push(4,x)
 	IF(
-		(4<5),
+		(x<5),
 		_*():
 			Push("Truth", stdout)
 		;,

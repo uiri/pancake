@@ -1,13 +1,9 @@
 @stdlib
 
 _Main():
-	Push(0, z)
+	Push(0,z)
 	Stdlib.Print("Which prime do you want?:")
-	Pop(z, stdin)
-	Push([], x)
-	Push(4, y)
-	Push(y, bignum)
-	Push(0, a)
+	Push(Stdlib.Scan(), z)
 	_Outer():
 		Stdlib.For(x, Main.Inner())
 		Push(1, y)
@@ -23,5 +19,9 @@ _Main():
 			Push(y, x),
 			Main.CheckPrime()
 		)
-	;	
+	;
+	Push([], x)
+	Push(4, y)
+	Push(y, bignum)
+	Push(0, a)	
 ;

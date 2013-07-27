@@ -2,7 +2,7 @@ _Print(x):
 	Push(x, stdout)
 ;
 
-_Scan(x):
+_Scan():
 	Pop(x, stdin)
 	Push("", x)
 ;
@@ -10,11 +10,13 @@ _Scan(x):
 _ReadFile(file):
 	Push("", ret)
 	Pop(ret, file)
+	Push("", y)
+	Push("", z)
 	While(
 		!(Push(Pop(y, file), z)=""),
 		_*():
 			Push(z, ret)
-			Pop(Length(z), z)
+			Pop(Stdlib.Length(z), z)
 		;
 	)
 	Push("", ret)
@@ -27,4 +29,5 @@ _Length(x):
 		Push(1, y)
 	)
 	Stdlib.Print(y)
+	Push(0, y)
 ;
