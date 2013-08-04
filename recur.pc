@@ -8,8 +8,9 @@ _MAIN():
 _Fac(n):
 	Push(1,m)
 	While( (Pop(1,n)>0),
-		Push(Multiply(n,m,0), m)
+		Push(Multiply(m,n,0), m)
 	)
+	Push(0, m)
 ;
 
 _Multiply(a,b,c):
@@ -18,4 +19,5 @@ _Multiply(a,b,c):
 		(Pop(1,b)>0),
 		Push(a, c)
 	)
+	Push(0, c)
 ;

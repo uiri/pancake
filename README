@@ -1,0 +1,9 @@
+Pancake interpreter(s).
+
+Copyright 2013 Uiri Noyb
+
+I should write a language spec at some point. Fairly easy to grok from the grammars in the implementations I would hope. At the very least know that Functions are capitalized and variables are not capitalized. Function definitions start with a _ followed by a Function Name followed by a ( followed by the list of arguments (variables separated by ,) followed by a ) followed by a : followed by potentially more function definitions and the list of statements that comprise the function followed finally by a ;. The entry point is a function called MAIN(). Primitive functions are File, Push, Pop, If and While. Enjoy!
+
+Python implementation is in pancake.py. It depends on PLY, a python library that implements lex and yacc.
+
+C implementation requires flex, bison and a working C compiler. Unlike the python implementation, the C one does not [yet] implement an interactive interpreter nor can one treat URLs as local files [yet]. The binary resulting from make is called simply 'pancake'.
