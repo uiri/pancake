@@ -696,6 +696,10 @@ char *printArg(struct argdata* data) {
       k = *(int*)data->data;
       i = k;
       j = 0;
+      if (i<0) {
+	i = 0 - i;
+	j++;
+      }
       freestr = 1;
       free(str); str = NULL;
       while (1) { 
@@ -706,6 +710,10 @@ char *printArg(struct argdata* data) {
 	else break;
       }
       str = malloc(j+1);
+      if (k < 0) {
+	str[0] = '-';
+	k = 0 - k;
+      }
       str[j] = '\0';
       j--;
       while (1) {
