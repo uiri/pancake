@@ -58,7 +58,6 @@ extern void yyerror(const char* msg);
 			  addToListEnd(buffernames, filename);
 			  yylval.symbol = filename;
 			  yypush_buffer_state(yy_create_buffer( yyin, YY_BUF_SIZE));
-			  return IMPORT;
 			}
 [\.,()[\]:<>=&|!]	{ return yytext[0]; }
 _			{ fdef = 1; return yytext[0]; }

@@ -68,7 +68,6 @@ void yyerror(const char *msg) {
    StatementList **funcdefs;
    List **funcargs;
    List *statements;
-   List *imports;
    char **funcnames;
    int funcount;
    int* statementnos;
@@ -86,7 +85,6 @@ void yyerror(const char *msg) {
    stl->funcdefs = NULL;
    stl->funcargs = NULL;
    stl->statements = newList();
-   stl->imports = newList();
    stl->funcnames = NULL;
    stl->funcount = 0;
    stl->statementnos = NULL;
@@ -137,7 +135,6 @@ void yyerror(const char *msg) {
      free(stl->funcargs);
    }
    freeList(stl->statements);
-   freeList(stl->imports);
    free(stl->statementnos);
    free(stl);
    return 0;
@@ -384,7 +381,6 @@ List* storevars;
 %token <symbol> STR
 %token <symbol> FUNC
 %token <symbol> VAR
-%token <symbol> IMPORT
 
 %type <slist> statementlist
 %type <funcdef> functiondef
@@ -395,7 +391,6 @@ List* storevars;
 %type <llist> arguments
 %type <llist> argumentlist
 %type <llist> compexpr
-%type <llist> importlist
 %type <data> argument
 
 %destructor { freeStatementList(rootsl); rootsl = $$; } <slist>
@@ -420,15 +415,6 @@ statementlist	: functiondef {
 				FREEDOM(FuncCall, $1);
 				incStatementNos($$);
 			}
-		| importlist statementlist {
-				if ($2->imports->data == NULL)
-				  $2->imports->data = $1;
-				else
-				  addToListEnd($2->imports, $1); 
-				FREEDOM(List, $1);
-				$$ = $2;
-				incStatementNos($$);
-			}
 		| statementlist functiondef {
 				addFuncDefToStatementList($1, $2);
 				$$ = $1;
@@ -444,21 +430,6 @@ statementlist	: functiondef {
 				FREEDOM(FuncCall, $2);
 				$$ = $1;
 				incStatementNos($$);
-			}
-		;
-
-importlist	: IMPORT {	
-				int l;
-				char* importname;
-				$$ = newList();
-				importname = $1;
-				l = strlen(importname);
-				importname[l] = '\0';
-				$$->data = $1;
-			}
-		| IMPORT importlist {
-				addToListEnd($2, $1);
-				$$ = $2;
 			}
 		;
 
