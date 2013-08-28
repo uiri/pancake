@@ -777,7 +777,7 @@ char *printArg(struct argdata* data) {
   }
   l = strlen(str);
   retval = realloc(retval, l+1);
-  for(;i<l;i++) retval[i] = str[i];
+  for(i=0;i<l;i++) retval[i] = str[i];
   retval[l] = '\0';
   if (freestr) free(str);
   return retval;
@@ -1751,6 +1751,7 @@ struct argdata *exec_func(struct functioncall *fncl) {
       }
       if (argad->type == 'v') {
 	m = lengthOfList(localvars);
+	argvd = argad->data;
 	for(n=0;n<m;n++) {
 	  slargvd = dataInListAtPosition(localvars, n);
 	  o = strlen(slargvd->name);
