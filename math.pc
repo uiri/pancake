@@ -1,0 +1,9 @@
+_Mod(a,p):
+	Push(0,c)
+	Push(0,a)
+	While(	(a>p),
+		Pop(p,a)
+	)
+	Stdlib.Print(a)
+	Push(0,a)
+;

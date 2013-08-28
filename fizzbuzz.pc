@@ -1,0 +1,39 @@
+@stdlib
+#@math
+
+_Mod(a,p):
+	Push(0,c)
+	Push(0,a)
+	While( (a>p),
+		_*():
+			Push(p,c)
+			While( (c>0),
+				_*():
+					Pop(1,a)
+					Stdlib.Print(a)
+					Pop(1,c)
+				;
+			)
+		;
+	)
+	Push(0,a)
+;
+
+_Main():
+	Push(1,x)
+	While(	(x<101),
+		_*():
+			If( (Mod(x,3)=0),
+				If( (Mod(x,5)=0),
+					Stdlib.Print("Fizzbuzz"),
+					Stdlib.Print("Fizz")
+				),
+				If(	(Mod(x,5)=0),
+					Stdlib.Print("Buzz"),
+					Stdlib.Print(x)
+				)
+			)
+			Push(1,x)
+		;
+	)
+;
